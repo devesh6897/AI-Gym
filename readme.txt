@@ -34,13 +34,13 @@ pip install -r requirements.txt
 ### Running with Webcam
 
 
-python integration.py --webcam
+python main.py --webcam
 
 
 ### Running with a Video File
 
 
-python integration.py --video resources/a.mp4
+python main.py --video resources/c.mp4
 
 
 ### Basic Pushup Counter
