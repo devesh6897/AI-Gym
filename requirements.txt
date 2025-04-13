@@ -2,3 +2,5 @@ tensorflow
 mediapipe
 numpy
 matplotlib
+opencv-python
+argparse

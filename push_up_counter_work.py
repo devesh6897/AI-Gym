@@ -164,7 +164,8 @@ while cap.isOpened():
 
         
     cv2.imshow('Pushup Counter', img)
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    key = cv2.waitKey(10) & 0xFF
+    if key == ord('q') or key == 27:  # 27 is the ASCII code for the Escape key
         break
         
 cap.release()

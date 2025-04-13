@@ -5,6 +5,7 @@ from Classifier import Classifier
 import numpy as np
 from collections import deque
 import math
+import argparse
 
 
 # Mapping dictionary to map keypoints from Mediapipe to our Classifier model
@@ -12,6 +13,14 @@ lm_dict = {
   0:0 , 1:10, 2:12, 3:14, 4:16, 5:11, 6:13, 7:15, 8:24, 9:26, 10:28, 11:23, 12:25, 13:27, 14:5, 15:2, 16:8, 17:7,
 }
 
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='DeepFit - Workout Trainer')
+    parser.add_argument('--video', type=str, default=None,
+                      help='Path to the video file to analyze')
+    parser.add_argument('--webcam', action='store_true', default=False,
+                      help='Use webcam as video source')
+    return parser.parse_args()
 
 
 def set_pose_parameters():
@@ -95,17 +104,40 @@ def convert_mediapipe_keypoints_for_model(lm_dict, landmark_list):
     return inp_pushup
 
 
-
-# Setting variables for video feed
-def set_video_feed_variables():
-    cap = cv2.VideoCapture(0)
+# Setting up video source - either webcam or uploaded file
+def set_video_source(video_path=None):
+    if video_path:
+        print(f"Loading video from: {video_path}")
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print("Error: Could not open video file.")
+            return None
+    else:
+        print("Using webcam as video source")
+        # Try multiple camera indices if the first one doesn't work
+        for i in range(3):  # Try camera indices 0, 1, 2
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                # Read a test frame to confirm it's working
+                ret, test_frame = cap.read()
+                if ret and test_frame is not None:
+                    print(f"Successfully connected to camera index {i}")
+                    break
+                else:
+                    cap.release()
+                    continue
+            
+            if i == 2:  # If we've tried all indices and none worked
+                print("Error: Could not access any webcam.")
+                return None
+    
     count = 0
     direction = 0
     form = 0
     feedback = "Bad Form."
     frame_queue = deque(maxlen=250)
     clf = Classifier('models/deepfit_classifier_v3.tflite')
-    return cap,count,direction,form,feedback,frame_queue,clf
+    return cap, count, direction, form, feedback, frame_queue, clf
 
 
 def set_percentage_bar_and_text(elbow_angle, knee_angle, workout_name_after_smoothening):
@@ -230,24 +262,72 @@ def display_workout_stats(count, form, feedback, draw_percentage_progress_bar, d
 
 
 def main():
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    # Set up pose detection
     mode, complexity, smooth_landmarks, enable_segmentation, smooth_segmentation, detectionCon, trackCon, mpPose = set_pose_parameters()
     pose = mpPose.Pose(mode, complexity, smooth_landmarks,
-                                enable_segmentation, smooth_segmentation,
-                                detectionCon, trackCon)
+                       enable_segmentation, smooth_segmentation,
+                       detectionCon, trackCon)
 
+    # Setting video source - either webcam or video file
+    if args.video:
+        cap, count, direction, form, feedback, frame_queue, clf = set_video_source(args.video)
+    else:
+        cap, count, direction, form, feedback, frame_queue, clf = set_video_source()
+    
+    if cap is None:
+        return
 
-    # Setting video feed variables
-    cap, count, direction, form, feedback, frame_queue, clf = set_video_feed_variables()
-
-
+    # Define standard display size
+    display_width = 960
+    display_height = 540
 
     #Start video feed and run workout
+    frame_count = 0
     while cap.isOpened():
-        #Getting image from camera
-        ret, img = cap.read() 
-        #Getting video dimensions
-        width  = cap.get(3)  
-        height = cap.get(4)  
+        #Getting image from camera or video file
+        ret, img = cap.read()
+        
+        if not ret:
+            print(f"Error reading frame {frame_count}")
+            # For webcam, we'll try a few more times before giving up
+            if args.video is None:
+                # Try up to 5 more times to get a frame from webcam
+                retry_count = 0
+                while retry_count < 5 and not ret:
+                    retry_count += 1
+                    print(f"Retrying webcam frame read, attempt {retry_count}")
+                    ret, img = cap.read()
+                    if ret:
+                        break
+                    
+                if not ret:
+                    print("Failed to read from webcam after multiple attempts. Exiting.")
+                    break
+            else:
+                # For video files, end of file is expected
+                print("End of video reached")
+                break
+            
+        frame_count += 1
+        
+        # Resize frame to standard display size while maintaining aspect ratio
+        h, w = img.shape[:2]
+        aspect = w / h
+        
+        if aspect > display_width / display_height:  # wider than our target
+            new_w = display_width
+            new_h = int(new_w / aspect)
+        else:  # taller than our target
+            new_h = display_height
+            new_w = int(new_h * aspect)
+            
+        img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        
+        #Getting video dimensions from resized image
+        height, width = img.shape[:2]
         
         #Convert from BGR (used by cv2) to RGB (used by Mediapipe)
         results = pose.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -328,7 +408,11 @@ def main():
         image_new = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)          
             
         cv2.imshow('DEEPFIT Workout Trainer', image_new)
-        if cv2.waitKey(10) & 0xFF == ord('q'):
+        
+        # Handle video playback speed for video files
+        wait_key = 10 if args.video is None else 30  # Slower playback for video files
+        key = cv2.waitKey(wait_key) & 0xFF
+        if key == ord('q') or key == 27:  # 27 is the ASCII code for the Escape key
             break
             
     cap.release()
