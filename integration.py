@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
 import matplotlib.pyplot as plt
-from DeepFitClassifier import DeepFitClassifier
+from Classifier import Classifier
 import numpy as np
 from collections import deque
 import math
@@ -104,7 +104,7 @@ def set_video_feed_variables():
     form = 0
     feedback = "Bad Form."
     frame_queue = deque(maxlen=250)
-    clf = DeepFitClassifier('models/deepfit_classifier_v3.tflite')
+    clf = Classifier('models/deepfit_classifier_v3.tflite')
     return cap,count,direction,form,feedback,frame_queue,clf
 
 

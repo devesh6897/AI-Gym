@@ -147,7 +147,7 @@ for i, ex in enumerate(LABELS):
     class_d[ex] = i
 
 
-class DeepFitClassifier:
+class Classifier:
     def __init__(self, model_path):
         """
         Load the TFLite model and allocate tensors \n
