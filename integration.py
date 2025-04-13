@@ -136,7 +136,7 @@ def set_video_source(video_path=None):
     form = 0
     feedback = "Bad Form."
     frame_queue = deque(maxlen=250)
-    clf = Classifier('models/deepfit_classifier_v3.tflite')
+    clf = Classifier('models/classifier_v3.tflite')
     return cap, count, direction, form, feedback, frame_queue, clf
 
 

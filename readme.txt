@@ -33,19 +33,15 @@ pip install -r requirements.txt
 
 ### Running with Webcam
 
-To run the application using your webcam:
 
-```
 python integration.py --webcam
-```
+
 
 ### Running with a Video File
 
-To analyze a pre-recorded video:
 
-```
 python integration.py --video path/to/your/video.mp4
-```
+
 
 ### Basic Pushup Counter
 
