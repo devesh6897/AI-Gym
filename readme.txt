@@ -40,7 +40,7 @@ python integration.py --webcam
 ### Running with a Video File
 
 
-python integration.py --video path/to/your/video.mp4
+python integration.py --video resources/a.mp4
 
 
 ### Basic Pushup Counter
